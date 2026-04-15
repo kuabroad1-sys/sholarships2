@@ -27,17 +27,22 @@ with col2:
     student_file = st.file_uploader("학생 기초 데이터(2.xlsx) 업로드", type=['xlsx'])
 
 if mapping_file and student_file:
+    # 데이터 로드
     mapping_df = pd.read_excel(mapping_file)
     student_df = pd.read_excel(student_file)
+    
+    # 대학명을 키로 하는 매핑 딕셔너리 생성
     mapping_dict = mapping_df.set_index('대학').to_dict(orient='index')
 
     def get_info(college):
+        # 매핑 정보가 없을 경우 기본값 처리
         info = mapping_dict.get(college, {'계열': '기타', '수업료': 0})
         return pd.Series([info['계열'], info['수업료']])
 
+    # 학생 데이터에 계열 및 수업료 추가
     student_df[['계열', '수업료']] = student_df['대학'].apply(get_info)
 
-    # 3. 필터링 로직
+    # 3. 필터링 로직 (제외 조건)
     eligible_df = student_df[
         (student_df['등록학기수'] < 8) &
         (student_df['포기전 최종학기 취득학점'] >= 12) &
@@ -48,20 +53,6 @@ if mapping_file and student_file:
 
     T = len(eligible_df)
     
+    # 등급별 총 쿼터 계산 (올림)
     quotas = {
-        '100%': (np.ceil(T / n_100) if n_100 > 0 else 0, 1.0),
-        '60%': (np.ceil(T / n_60) if n_60 > 0 else 0, 0.6),
-        '30%': (np.ceil(T / n_30) if n_30 > 0 else 0, 0.3),
-        '10%': (np.ceil(T / n_10) if n_10 > 0 else 0, 0.1)
-    }
-
-    # 4. 선발 및 커트라인 기록
-    group_ratios = eligible_df['계열'].value_counts() / T
-    final_list = []
-    cutoffs = [] # 커트라인 정보를 담을 리스트
-
-    for group in ['이공계', '비이공계', '국제대학']: # 계열별 순회
-        if group not in group_ratios: continue
-        
-        group_df = eligible_df[eligible_df['계열'] == group].sort_values(by='포기전 최종학기 평점평균', ascending=False)
-        ratio =
+        '100%': (np.ceil(T / n_100) if n_100
