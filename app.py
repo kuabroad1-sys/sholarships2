@@ -45,5 +45,23 @@ if mapping_file is not None and student_file is not None:
     student_df[['계열', '수업료']] = student_df['대학'].apply(get_info)
 
     # 3. 필터링 로직 (제외 조건 적용)
+    # 텍스트가 잘리지 않도록 변수명과 따옴표를 명확히 작성
     eligible_df = student_df[
-        (student_df['등록학
+        (student_df['등록학기수'] < 8) &
+        (student_df['포기전 최종학기 취득학점'] >= 12) &
+        (student_df['국적'] != '대한민국') &
+        (student_df['추천기관'] != '국립국제교육원') &
+        (student_df['포기전 최종학기 평점평균'] >= 3.0)
+    ].copy()
+
+    T = len(eligible_df)
+    
+    # 4. 등급별 총 쿼터 계산 (올림 처리)
+    quotas = {
+        '100%': (np.ceil(T / n_100) if n_100 > 0 else 0, 1.0),
+        '60%': (np.ceil(T / n_60) if n_60 > 0 else 0, 0.6),
+        '30%': (np.ceil(T / n_30) if n_30 > 0 else 0, 0.3),
+        '10%': (np.ceil(T / n_10) if n_10 > 0 else 0, 0.1)
+    }
+
+    # 5. 계열별 비율 및 선발
